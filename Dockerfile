@@ -20,28 +20,28 @@
 FROM curlimages/curl:latest as gocd-server-unzip
 USER root
 ARG UID=1000
-RUN curl --fail --location --silent --show-error "https://download.gocd.org/binaries/22.2.0-14697/generic/go-server-22.2.0-14697.zip" > /tmp/go-server-22.2.0-14697.zip
-RUN unzip /tmp/go-server-22.2.0-14697.zip -d /
-RUN mkdir -p /go-server/wrapper /go-server/bin && \
-    mv /go-server-22.2.0/LICENSE /go-server/LICENSE && \
-    mv /go-server-22.2.0/bin/go-server /go-server/bin/go-server && \
-    mv /go-server-22.2.0/lib /go-server/lib && \
-    mv /go-server-22.2.0/logs /go-server/logs && \
-    mv /go-server-22.2.0/run /go-server/run && \
-    mv /go-server-22.2.0/wrapper-config /go-server/wrapper-config && \
-    mv /go-server-22.2.0/wrapper/wrapper-linux* /go-server/wrapper/ && \
-    mv /go-server-22.2.0/wrapper/libwrapper-linux* /go-server/wrapper/ && \
-    mv /go-server-22.2.0/wrapper/wrapper.jar /go-server/wrapper/ && \
+RUN curl --fail --location --silent --show-error "https://download.gocd.org/binaries/22.3.0-15301/generic/go-server-22.3.0-15301.zip" > /tmp/go-server-22.3.0-15301.zip && \
+    unzip /tmp/go-server-22.3.0-15301.zip -d / && \
+    mkdir -p /go-server/wrapper /go-server/bin && \
+    mv /go-server-22.3.0/LICENSE /go-server/LICENSE && \
+    mv /go-server-22.3.0/bin/go-server /go-server/bin/go-server && \
+    mv /go-server-22.3.0/lib /go-server/lib && \
+    mv /go-server-22.3.0/logs /go-server/logs && \
+    mv /go-server-22.3.0/run /go-server/run && \
+    mv /go-server-22.3.0/wrapper-config /go-server/wrapper-config && \
+    mv /go-server-22.3.0/wrapper/wrapper-linux* /go-server/wrapper/ && \
+    mv /go-server-22.3.0/wrapper/libwrapper-linux* /go-server/wrapper/ && \
+    mv /go-server-22.3.0/wrapper/wrapper.jar /go-server/wrapper/ && \
     chown -R ${UID}:0 /go-server && chmod -R g=u /go-server
 
 FROM quay.io/centos/centos:stream8
 
-LABEL gocd.version="22.2.0" \
+LABEL gocd.version="22.3.0" \
   description="GoCD server based on quay.io/centos/centos:stream8" \
   maintainer="GoCD Team <go-cd-dev@googlegroups.com>" \
   url="https://www.gocd.org" \
-  gocd.full.version="22.2.0-14697" \
-  gocd.git.sha="4bdda4e0d769e66da651926c7066979740bd7ae7"
+  gocd.full.version="22.3.0-15301" \
+  gocd.git.sha="9d23ed19a9ea46eaf7f18bd16671ae0569871f53"
 
 # the ports that GoCD server runs on
 EXPOSE 8153
@@ -61,12 +61,14 @@ RUN \
 # add our user and group first to make sure their IDs get assigned consistently,
 # regardless of whatever dependencies get added
 # add user to root group for GoCD to work on openshift
-  useradd -u ${UID} -g root -d /home/go -m go && \
-  yum install --assumeyes glibc-langpack-en && \
-  yum update -y && \
-  yum install -y git mercurial subversion openssh-clients bash unzip procps procps-ng coreutils-single curl && \
-  yum clean all && \
-  curl --fail --location --silent --show-error 'https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.4%2B8/OpenJDK17U-jre_x64_linux_hotspot_17.0.4_8.tar.gz' --output /tmp/jre.tar.gz && \
+  useradd -l -u ${UID} -g root -d /home/go -m go && \
+  dnf install --assumeyes glibc-langpack-en && \
+  dnf update -y && \
+  dnf upgrade -y && \
+  dnf install -y git mercurial subversion openssh-clients bash unzip procps procps-ng coreutils-single curl && \
+  dnf clean all && \
+  rm -rf /var/cache/dnf && \
+  curl --fail --location --silent --show-error 'https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.5%2B8/OpenJDK17U-jre_x64_linux_hotspot_17.0.5_8.tar.gz' --output /tmp/jre.tar.gz && \
   mkdir -p /gocd-jre && \
   tar -xf /tmp/jre.tar.gz -C /gocd-jre --strip 1 && \
   rm -rf /tmp/jre.tar.gz && \
@@ -79,8 +81,8 @@ COPY --from=gocd-server-unzip /go-server /go-server
 COPY --chown=go:root logback-include.xml /go-server/config/logback-include.xml
 COPY --chown=go:root install-gocd-plugins git-clone-config /usr/local/sbin/
 
-RUN chown -R go:root /docker-entrypoint.d /go-working-dir /godata /docker-entrypoint.sh \
-    && chmod -R g=u /docker-entrypoint.d /go-working-dir /godata /docker-entrypoint.sh
+RUN chown -R go:root /docker-entrypoint.d /go-working-dir /godata /docker-entrypoint.sh && \
+    chmod -R g=u /docker-entrypoint.d /go-working-dir /godata /docker-entrypoint.sh
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
